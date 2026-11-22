@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MARISOL BAY — take the city, district by district</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a0f2e;
+    font-family: "Arial Black", Arial, Helvetica, sans-serif; color: #fff; }
+  #app { position: fixed; inset: 0; }
+  canvas.webgl { display: block; width: 100%; height: 100%; }
+  .panel { position: absolute; background: rgba(12, 10, 28, 0.82); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px; padding: 10px 12px; backdrop-filter: blur(2px); }
+  .kicker { color: #ffd23e; font-size: 11px; letter-spacing: 2px; }
+  .title { font-size: 22px; letter-spacing: 1px; line-height: 1.05; }
+  .stage { font-size: 11px; color: #cfd2ff; margin-top: 4px; letter-spacing: 1px; }
+  .bar { height: 8px; background: rgba(255,255,255,0.18); border-radius: 4px; margin-top: 5px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg,#ffd23e,#ff7a3c); border-radius: 4px; }
+  .next { font-size: 12px; margin-top: 6px; color: #fff; font-family: Arial, Helvetica, sans-serif; font-weight: bold; }
+  .next b { color: #7ee2a8; }
+  #mission { top: 14px; left: 14px; width: 300px; border-top: 3px solid #ffd23e; }
+  #clock { top: 12px; left: 50%; transform: translateX(-50%); font-size: 20px; letter-spacing: 2px;
+    background: none; border: none; text-shadow: 0 2px 6px rgba(0,0,0,0.7); padding: 0; }
+  #money { top: 12px; right: 14px; text-align: right; background: none; border: none; padding: 0; }
+  #money .cash { font-size: 30px; color: #7ee2a8; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+  #money .stars { font-size: 22px; letter-spacing: 3px; color: #ffd23e; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+  #money .stars .off { color: rgba(255,255,255,0.35); }
+  #money .air { font-size: 11px; color: #ff9d9d; letter-spacing: 2px; margin-top: 2px; }
+  #dispatch { top: 132px; left: 14px; width: 308px; font-size: 11px; }
+  #dispatch h3 { color: #ff9d9d; font-size: 12px; letter-spacing: 2px; margin-bottom: 6px; }
+  #dispatch h3 span { float: right; color: #fff; }
+  #dispatch table { width: 100%; border-collapse: collapse; }
+  #dispatch td { padding: 2px 0; white-space: nowrap; font-family: Arial, Helvetica, sans-serif; font-weight: bold; }
+  #dispatch td:last-child { text-align: right; }
+  .tag { font-weight: bold; font-size: 9px; padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+  .tag.ram { background: #ff5a3c; } .tag.flk { background: #2ea8ff; } .tag.spt { background: #ffd23e; color: #222; }
+  .tag.cls { background: #7ee2a8; color: #123; } .tag.rdb { background: #b388ff; }
+  #loadout { top: 132px; right: 14px; width: 250px; text-align: right; }
+  #loadout .rank { font-size: 12px; color: #ffd23e; letter-spacing: 1px; }
+  #loadout .rp { font-size: 11px; color: #cfd2ff; font-family: Arial, sans-serif; }
+  #weapons { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+  .wpn { width: 52px; padding: 6px 2px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px; text-align: center; font-size: 10px; font-family: Arial, sans-serif; font-weight: bold; }
+  .wpn.sel { border-color: #ffd23e; background: rgba(255,210,62,0.18); }
+  .wpn .n { font-size: 11px; color: #ffd23e; } .wpn .ic { font-size: 16px; display: block; margin: 2px 0; }
+  .crew { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 8px;
+    background: rgba(255,255,255,0.07); border-radius: 8px; text-align: left; font-size: 11px; font-family: Arial, sans-serif; }
+  .crew .face { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex: none; font-weight: bold; }
+  .crew .key { margin-left: auto; background: #ffd23e; color: #222; border-radius: 4px; padding: 2px 7px; font-size: 11px; }
+  #district { left: 14px; bottom: 218px; background: none; border: none; padding: 0; }
+  #district .name { font-size: 24px; color: #ffd23e; letter-spacing: 1px; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  #district .sub { font-size: 12px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.8); font-family: Arial, sans-serif; font-weight: bold; }
+  #minimap { position: absolute; left: 14px; bottom: 14px; width: 150px; height: 150px; border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.5); background: #10182e; }
+  #vitals { position: absolute; left: 14px; bottom: 172px; font-size: 11px; width: 150px; font-family: Arial, sans-serif; font-weight: bold; }
+  #vitals .row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  #vitals .vbar { flex: 1; height: 7px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; }
+  #vitals .vbar > i { display: block; height: 100%; }
+  #speedo { right: 16px; bottom: 14px; text-align: right; background: none; border: none; padding: 0; }
+  #speedo .num { font-size: 64px; line-height: 0.9; text-shadow: 0 3px 8px rgba(0,0,0,0.7); }
+  #speedo .unit { font-size: 14px; color: #ffd23e; }
+  #speedo .car { font-size: 15px; color: #7ee2a8; margin-top: 2px; }
+  #speedo .cond { font-size: 12px; color: #ffb13c; font-family: Arial, sans-serif; font-weight: bold; }
+  #radio { position: absolute; right: 16px; bottom: 128px; font-size: 12px; color: #7ee2a8;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8); font-family: Arial, sans-serif; font-weight: bold; }
+  #dialogue { left: 50%; transform: translateX(-50%); bottom: 16px; width: 460px; display: flex; gap: 10px;
+    align-items: center; }
+  #dialogue .portrait { width: 46px; height: 46px; border-radius: 8px; background: #2ea8ff; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; flex: none; border: 2px solid #7ee2a8; }
+  #dialogue .who { color: #7ee2a8; font-size: 12px; letter-spacing: 1px; }
+  #dialogue .line { font-size: 14px; font-family: Arial, Helvetica, sans-serif; font-weight: bold; line-height: 1.3; }
+  #banner { top: 84px; left: 50%; transform: translateX(-50%); background: rgba(255,60,60,0.9);
+    border: none; font-size: 14px; letter-spacing: 2px; padding: 8px 18px; display: none; }
+  #garagePanel { top: 50%; right: 26px; transform: translateY(-50%); width: 380px; border: 2px solid #ffd23e;
+    display: none; }
+  #garagePanel h2 { color: #ffd23e; font-size: 22px; letter-spacing: 2px; margin-bottom: 8px; }
+  #garagePanel p { font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.45; color: #e8e8f2; }
+  #garagePanel table { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12px; font-family: Arial, sans-serif; }
+  #garagePanel td { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
+  #garagePanel td:last-child { text-align: right; color: #7ee2a8; }
+  #garagePanel .btn { margin-top: 14px; display: inline-block; background: #ffd23e; color: #222; border: none;
+    border-radius: 8px; padding: 10px 18px; font-family: inherit; font-size: 14px; cursor: pointer; }
+  #help { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); font-size: 11px;
+    color: rgba(255,255,255,0.75); font-family: Arial, sans-serif; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+  #toast { position: absolute; top: 44%; left: 50%; transform: translate(-50%,-50%); font-size: 34px; color: #ffd23e;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.8); display: none; letter-spacing: 2px; }
+  /* ---------- MAP + STATS full screen ---------- */
+  #mapScreen { position: fixed; inset: 0; display: none; z-index: 20; background: linear-gradient(160deg,#141231 0%,#1d1840 55%,#241a3a 100%);
+    padding: 18px 26px; font-family: Arial, Helvetica, sans-serif; }
+  #mapScreen .mhead { display: flex; align-items: baseline; gap: 18px; }
+  #mapScreen .mhead h1 { font-family: "Arial Black", Arial, sans-serif; font-size: 34px; letter-spacing: 3px; color: #ffd23e; }
+  #mapScreen .tabs { display: flex; gap: 4px; margin-left: auto; }
+  #mapScreen .tabs span { padding: 8px 14px; border-radius: 8px 8px 0 0; font-size: 12px; font-weight: bold;
+    letter-spacing: 1px; color: #cfd2ff; background: rgba(255,255,255,0.06); }
+  #mapScreen .tabs span.on { background: #ffd23e; color: #222; }
+  #mapScreen .mgrid { display: grid; grid-template-columns: 300px 1fr 300px; gap: 18px; margin-top: 10px; height: calc(100% - 118px); }
+  #mapScreen .col { background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 14px; overflow: hidden; }
+  #mapScreen h2 { font-size: 13px; letter-spacing: 2px; color: #ffd23e; margin-bottom: 10px; }
+  #mapScreen .ring { display: flex; align-items: center; gap: 14px; }
+  #mapScreen .ring b { font-size: 30px; color: #fff; }
+  #mapScreen .ring small { color: #cfd2ff; font-size: 11px; letter-spacing: 1px; }
+  #mapScreen .chk { margin-top: 12px; font-size: 12px; }
+  #mapScreen .chk .row { display: flex; justify-content: space-between; margin: 7px 0 3px; }
+  #mapScreen .chk .bar { height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; }
+  #mapScreen .chk .bar i { display: block; height: 100%; background: linear-gradient(90deg,#7ee2a8,#2ea8ff); }
+  #mapScreen .medals { margin-top: 12px; font-size: 20px; letter-spacing: 6px; }
+  #mapCanvas { width: 100%; height: 100%; border-radius: 8px; display: block; }
+  #mapScreen .stat { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1); }
+  #mapScreen .stat b { color: #7ee2a8; }
+  #mapScreen .slot { background: rgba(255,255,255,0.07); border-radius: 8px; padding: 9px 10px; margin-top: 8px; font-size: 12px; }
+  #mapScreen .slot b { color: #ffd23e; }
+  #mapScreen .slot .save { float: right; background: #7ee2a8; color: #123; border-radius: 4px; padding: 2px 8px; font-weight: bold; }
+  #mapScreen .mfoot { margin-top: 10px; font-size: 12px; color: #cfd2ff; letter-spacing: 1px; text-align: center; }
+  /* ---------- TITLE screen ---------- */
+  #titleScreen { position: fixed; inset: 0; display: none; z-index: 30; font-family: Arial, Helvetica, sans-serif; }
+  #titleScreen .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,10,40,0.15) 0%, rgba(20,10,40,0.05) 45%, rgba(20,10,40,0.55) 100%); }
+  #titleScreen .tinner { position: absolute; inset: 0; padding: 46px 56px 30px; display: flex; flex-direction: column; }
+  #titleScreen h1 { font-family: "Arial Black", Arial, sans-serif; font-size: 96px; line-height: 0.95; letter-spacing: 4px;
+    background: linear-gradient(180deg,#fff7d6 0%,#ffd23e 45%,#ff7a3c 75%,#ff4a6a 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.65)); }
+  #titleScreen h2 { font-family: "Arial Black", Arial, sans-serif; font-size: 26px; letter-spacing: 10px; color: #ffe9a8;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.7); margin-top: 6px; }
+  #titleScreen .trow { display: flex; margin-top: auto; gap: 40px; align-items: flex-end; }
+  #titleScreen .menu { display: flex; flex-direction: column; gap: 10px; width: 300px; }
+  #titleScreen .menu button { font-family: "Arial Black", Arial, sans-serif; font-size: 18px; letter-spacing: 2px;
+    text-align: left; padding: 12px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(12,10,28,0.72); color: #fff; cursor: pointer; }
+  #titleScreen .menu button.hot { background: #ffd23e; color: #222; border-color: #ffd23e; }
+  #titleScreen .tslots { margin-left: auto; width: 340px; background: rgba(12,10,28,0.78); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 12px; padding: 14px; }
+  #titleScreen .tslots h3 { font-size: 12px; letter-spacing: 2px; color: #ffd23e; margin-bottom: 8px; }
+  #titleScreen .tslots .slot { background: rgba(255,255,255,0.07); border-radius: 8px; padding: 9px 10px; margin-top: 8px; font-size: 12px; }
+  #titleScreen .tslots .slot b { color: #ffd23e; }
+  #titleScreen .tagline { margin-top: 18px; font-size: 12px; color: rgba(255,255,255,0.85); letter-spacing: 1px;
+    text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+  body.shot-map #mapScreen, body.shot-title #titleScreen { display: block; }
+  body.shot-map .hud, body.shot-title .hud { display: none !important; }
+  body.shot-street #speedo, body.shot-street #radio { display: none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="panel hud" id="mission">
+  <div class="kicker" id="mKicker">MISSION 6 · ORU'S FALL</div>
+  <div class="title" id="mTitle">WRECK THE REGENT</div>
+  <div class="stage" id="mStage">STAGE 3/4</div>
+  <div class="bar"><i id="mBar" style="width:75%"></i></div>
+  <div class="next">NEXT&nbsp; <b id="mNext">Vanish</b></div>
+  <div class="next" id="mObj" style="color:#cfd2ff">Wreck Oru's Regent before it reaches the pier</div>
+</div>
+<div class="panel hud" id="clock">16:00</div>
+<div class="panel hud" id="money">
+  <div class="cash" id="mCash">₮18,450</div>
+  <div class="stars" id="mStars">★★★★<span class="off">★</span></div>
+  <div class="air" id="mAir">AIR UNIT DEPLOYED</div>
+</div>
+<div class="panel hud" id="banner">IN SIGHT — AIR ONE HAS YOU IN THE LIGHT</div>
+
+<div class="panel hud" id="dispatch">
+  <h3 id="dHead">KPD RESPONSE <span>6 UNITS</span></h3>
+  <table id="dTable">
+    <tr><td>▲ KITE-1 · MARKSMAN</td><td>15 m<span class="tag ram">RAMMING</span></td></tr>
+    <tr><td>▲ MARLIN-3 · SHORE WATCH</td><td>187 m<span class="tag flk">FLANKING</span></td></tr>
+    <tr><td>▲ CORAL-48</td><td>7 m<span class="tag ram">RAMMING</span></td></tr>
+    <tr><td>▲ CORAL-85</td><td>14 m<span class="tag flk">FLANKING</span></td></tr>
+    <tr><td>▲ CORAL-43</td><td>15 m<span class="tag ram">RAMMING</span></td></tr>
+    <tr><td>▲ AIR ONE</td><td>36 m<span class="tag spt">SPOTLIGHT</span></td></tr>
+  </table>
+  <div id="dNote" style="margin-top:4px;font-size:11px;color:#cfd2ff;font-family:Arial,sans-serif">+1 more</div>
+</div>
+
+<div class="panel hud" id="loadout">
+  <div class="rank" id="lRank">RANK B · FIXER</div>
+  <div class="rp" id="lRp">3,900 / 5,200 RP</div>
+  <div id="weapons">
+    <div class="wpn"><span class="n">1</span><span class="ic">✊</span>FISTS<br>∞</div>
+    <div class="wpn"><span class="n">2</span><span class="ic">🔫</span>.38<br>60</div>
+    <div class="wpn sel"><span class="n">3</span><span class="ic">🔫</span>SMG<br>30/60</div>
+    <div class="wpn"><span class="n">4</span><span class="ic">🔫</span>AR-9<br>18</div>
+  </div>
+  <div id="crewBox">
+    <div class="crew"><div class="face" style="background:#2ea8ff">M</div><div><b>SWAP PLATES</b><br>Mira · Driver</div><span class="key">Z</span></div>
+    <div class="crew"><div class="face" style="background:#ffb13c">L</div><div><b>QUICK FIX</b><br>Lio · Mechanic</div><span class="key">X</span></div>
+    <div class="crew"><div class="face" style="background:#b388ff">K</div><div><b>EYES OUT</b><br>Kiki · Lookout</div><span class="key">C</span></div>
+  </div>
+</div>
+
+<div class="panel hud" id="district">
+  <div class="name" id="dName">KUMALA STRAND</div>
+  <div class="sub" id="dSub">Strand Boulevard · NEUTRAL · 58</div>
+</div>
+<div class="hud" id="vitals">
+  <div class="row">HEALTH <div class="vbar"><i style="width:72%;background:#4ade80"></i></div> <span id="vHealth">72</span></div>
+  <div class="row">ARMOUR <div class="vbar"><i style="width:55%;background:#38bdf8"></i></div> <span id="vArmour">55</span></div>
+</div>
+<canvas class="hud" id="minimap" width="150" height="150"></canvas>
+
+<div class="hud" id="radio">♪ OMBO 98.4 — “Island Pop”</div>
+<div class="panel hud" id="speedo">
+  <div><span class="num" id="spd">111</span> <span class="unit">KM/H</span></div>
+  <div class="car">RUKAN PELO GT</div>
+  <div class="cond" id="spdCond">62% DENTED</div>
+</div>
+
+<div class="panel hud" id="dialogue">
+  <div class="portrait">MK</div>
+  <div><div class="who" id="dlgWho">MIRA KESANG · DRIVER</div><div class="line" id="dlgLine">He’s making for Kumala Pier! Ram the Regent before it reaches the water!</div></div>
+</div>
+
+<div class="panel" id="garagePanel">
+  <h2>PALM COURT GARAGE</h2>
+  <p>Your Rukan Pelo GT, fully serviced. Spend turf cash on upgrades — every part shows up on the car.</p>
+  <table>
+    <tr><td>ENGINE · Stage 3</td><td>+18% top speed · $1,200 · OWNED</td></tr>
+    <tr><td>ARMOUR · Plated doors</td><td>+40 armour · $900 · OWNED</td></tr>
+    <tr><td>NITRO · Mango boost</td><td>Hold SHIFT · $1,500 · OWNED</td></tr>
+    <tr><td>PAINT · Sunset orange</td><td>Gloss + gold pinstripe · $400 · OWNED</td></tr>
+    <tr><td>WHEELS · Silver discs</td><td>Street set · $650 · OWNED</td></tr>
+  </table>
+  <button class="btn" id="backBtn">BACK TO THE STREET</button>
+</div>
+
+<div class="hud" id="help">W A S D drive · SHIFT nitro · G garage · M map · 1-4 weapons · Z / X / C crew</div>
+<div id="toast"></div>
+
+<!-- MAP + STATS -->
+<div id="mapScreen">
+  <div class="mhead">
+    <h1>MARISOL BAY</h1>
+    <div class="tabs"><span class="on">MAP</span><span>STORY</span><span>STATS</span><span>CREW</span><span>SETTINGS</span><span>CONTROLS</span><span>SAVE</span></div>
+  </div>
+  <div class="mgrid">
+    <div class="col">
+      <h2>PROGRESS</h2>
+      <div class="ring">
+        <svg width="92" height="92" viewBox="0 0 92 92"><circle cx="46" cy="46" r="38" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="9"/><circle cx="46" cy="46" r="38" fill="none" stroke="#7ee2a8" stroke-width="9" stroke-linecap="round" stroke-dasharray="238.7" stroke-dashoffset="81" transform="rotate(-90 46 46)"/><text x="46" y="52" text-anchor="middle" fill="#fff" font-size="17" font-weight="bold">66.1%</text></svg>
+        <div><b>66.1%</b><br><small>COMPLETE</small></div>
+      </div>
+      <div class="chk" id="mapChecklist"></div>
+      <div class="medals">🥇 🥈 🥇 🥉 🥇</div>
+      <div style="font-size:11px;color:#cfd2ff;margin-top:4px">MISSION RATINGS · G2 S1 B1</div>
+    </div>
+    <div class="col" style="padding:8px"><canvas id="mapCanvas" width="640" height="520"></canvas></div>
+    <div class="col">
+      <h2>RANK 5 · FIXER</h2>
+      <div style="font-size:12px;color:#cfd2ff">RP 3,900 / 5,200 — next rank at 5,200</div>
+      <div class="bar" style="margin:8px 0 12px"><i style="width:75%"></i></div>
+      <h2>CAREER</h2>
+      <div class="stat"><span>Cars stolen</span><b>41</b></div>
+      <div class="stat"><span>Cops escaped</span><b>12</b></div>
+      <div class="stat"><span>Km driven</span><b>48.2</b></div>
+      <div class="stat"><span>People taken out</span><b>23</b></div>
+      <div class="stat"><span>Longest jump</span><b>47 m</b></div>
+      <div class="stat"><span>Crew abilities</span><b>38</b></div>
+      <div class="stat"><span>Hidden by locals</span><b>9</b></div>
+      <h2 style="margin-top:14px">SAVE SLOTS</h2>
+      <div class="slot"><b>SLOT 1</b> · 32.8% · Market Squeeze · 19:31 <span class="save">SAVE</span></div>
+      <div class="slot"><b>SLOT 2</b> · 16.8% · Gold Paint · 11:04 <span class="save">SAVE</span></div>
+      <div class="slot"><b>SLOT 3</b> · EMPTY <span class="save">SAVE</span></div>
+    </div>
+  </div>
+  <div class="mfoot">ESC resume · Q / E switch tab · click the map to set a waypoint</div>
+</div>
+
+<!-- TITLE -->
+<div id="titleScreen">
+  <div class="shade"></div>
+  <div class="tinner">
+    <h1>MARISOL<br>BAY</h1>
+    <h2>TAKE THE CITY, DISTRICT BY DISTRICT</h2>
+    <div class="trow">
+      <div class="menu">
+        <button class="hot" id="btnContinue">▶ CONTINUE</button>
+        <button id="btnNew">NEW GAME</button>
+        <button id="btnLoad">LOAD GAME</button>
+        <button id="btnSettings">SETTINGS</button>
+      </div>
+      <div class="tslots">
+        <h3>SAVE FILES</h3>
+        <div class="slot"><b>SLOT 1</b> · ACT II — MARKET SQUEEZE · 32.8%</div>
+        <div class="slot"><b>SLOT 2</b> · ACT I — GOLD PAINT · 16.8%</div>
+        <div class="slot"><b>SLOT 3</b> · EMPTY</div>
+      </div>
+    </div>
+    <div class="tagline">An original open-world crime story on an island that never existed · Keyboard &amp; mouse</div>
+  </div>
+</div>
+
+<script type="module" src="./game.js"></script>
+</body>
+</html>
